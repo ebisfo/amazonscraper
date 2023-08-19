@@ -1,0 +1,53 @@
+import requests
+from bs4 import BeautifulSoup
+import matplotlib.pyplot as plt
+import numpy as np
+
+def fetch_top_selling_books():
+    url = 'https://www.amazon.com/gp/bestsellers/books/10417'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    books = soup.find_all('div', class_='a-section aok-relative s-widget-text-container')
+    book_titles = []
+    book_prices = []
+
+    for book in books:
+        title = book.find('span', class_='a-size-medium a-color-base a-text-normal').text.strip()
+        price = book.find('span', class_='p13n-sc-price').text.strip().replace('$', '')
+        book_titles.append(title)
+        book_prices.append(float(price))
+
+    return book_titles, book_prices
+
+def plot_chart(book_titles, book_prices):
+    fig, ax = plt.subplots()
+    ax.bar(book_titles, book_prices)
+
+    # Highlight outliers and averages
+    average_price = np.mean(book_prices)
+    std_dev = np.std(book_prices)
+    threshold = 1.5 * std_dev
+
+    for i in range(len(book_titles)):
+        if book_prices[i] > average_price + threshold or book_prices[i] < average_price - threshold:
+            ax.annotate('Outlier', xy=(book_titles[i], book_prices[i]), xytext=(10, 10),
+                        textcoords='offset points', arrowprops=dict(arrowstyle='->', color='red'))
+        elif book_prices[i] > average_price:
+            ax.annotate('Above Average', xy=(book_titles[i], book_prices[i]), xytext=(10, 10),
+                        textcoords='offset points', arrowprops=dict(arrowstyle='->', color='green'))
+        elif book_prices[i] < average_price:
+            ax.annotate('Below Average', xy=(book_titles[i], book_prices[i]), xytext=(10, 10),
+                        textcoords='offset points', arrowprops=dict(arrowstyle='->', color='blue'))
+
+    plt.xticks(rotation=90)
+    plt.xlabel('Book Title')
+    plt.ylabel('Price ($)')
+    plt.title('Top Selling')
+    plt.tight_layout()
+    plt.show()
+
+
+titles, prices = fetch_top_selling_books()
+
+
+plot_chart(titles, prices)
